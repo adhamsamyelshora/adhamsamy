@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  passwordHash  String
+  name          String
+  age           Int?
+  heightCm      Float?
+  weightGoalKg  Float?
+  calorieGoal   Int?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  meals         Meal[]
+  foods         Food[]
+  weightEntries WeightEntry[]
+  tasks         Task[]
+  tags          Tag[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  categories    Category[]
+  accounts      Account[]
+  projects      Project[]
+  timesheets    Timesheet[]
+  workNotes     WorkNote[]
+}
+
+model Meal {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  mealType  MealType
+  createdAt DateTime   @default(now())
+  items     MealItem[]
+
+  @@index([userId, date])
+}
+
+model MealItem {
+  id        String   @id @default(cuid())
+  mealId    String
+  meal      Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  foodId    String?
+  food      Food?    @relation(fields: [foodId], references: [id])
+  name      String
+  quantity  Float
+  unit      String
+  calories  Float
+  protein   Float
+  carbs     Float
+  fat       Float
+}
+
+model Food {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  calories  Float
+  protein   Float
+  carbs     Float
+  fat       Float
+  createdAt DateTime @default(now())
+
+  @@index([userId, name])
+}
+
+model WeightEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  weightKg  Float
+  notes     String?
+
+  @@index([userId, date])
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  dueDate     DateTime?
+  priority    Priority
+  status      TaskStatus @default(todo)
+  taskType    TaskType
+  reminderAt  DateTime?
+  createdAt   DateTime   @default(now())
+  tags        TaskTag[]
+
+  @@index([userId, dueDate])
+}
+
+model Tag {
+  id     String    @id @default(cuid())
+  userId String
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String
+  tasks  TaskTag[]
+
+  @@unique([userId, name])
+}
+
+model TaskTag {
+  taskId String
+  tagId  String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, tagId])
+}
+
+model Transaction {
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date       DateTime
+  amount     Float
+  type       TransactionType
+  categoryId String?
+  category   Category?       @relation(fields: [categoryId], references: [id])
+  accountId  String?
+  account    Account?        @relation(fields: [accountId], references: [id])
+  notes      String?
+
+  @@index([userId, date])
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month      DateTime
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  limit      Float
+
+  @@unique([userId, month, categoryId])
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  categoryType CategoryType
+  budgets      Budget[]
+  transactions Transaction[]
+
+  @@unique([userId, name, categoryType])
+}
+
+model Account {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  transactions Transaction[]
+
+  @@unique([userId, name])
+}
+
+model Project {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  status     String
+  timesheets Timesheet[]
+  notes      WorkNote[]
+  createdAt  DateTime    @default(now())
+}
+
+model Timesheet {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date        DateTime
+  hours       Float
+  description String?
+
+  @@index([userId, date])
+}
+
+model WorkNote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+enum MealType {
+  breakfast
+  lunch
+  dinner
+  snack
+}
+
+enum Priority {
+  low
+  medium
+  high
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  done
+}
+
+enum TaskType {
+  personal
+  work
+}
+
+enum TransactionType {
+  income
+  expense
+  transfer
+}
+
+enum CategoryType {
+  income
+  expense
+}
